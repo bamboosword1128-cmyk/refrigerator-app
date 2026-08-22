@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="2025・2026年発売の冷蔵庫を、メーカー・タイプ・発売年・容量から比較できる接客ナビ" />
+    <title>家電説明ナビ</title>
+    <link rel="stylesheet" href="styles.css?v=20260818" />
+  </head>
+  <body>
+    <nav class="skip-links" aria-label="スキップリンク">
+      <a href="#filters">絞り込み条件へ</a>
+      <a href="#results">商品一覧へ</a>
+      <a href="#compare">比較リストへ</a>
+    </nav>
+
+    <header class="topbar">
+      <div class="brand">
+        <p id="appKicker" class="kicker">家電量販店 接客用</p>
+        <h1 id="appTitle">家電説明ナビ</h1>
+      </div>
+      <div class="summary-strip" role="group" aria-label="掲載数">
+        <div><span id="makerCount">0</span><small id="makerCountLabel">メーカー</small></div>
+        <div><span id="itemCount">0</span><small id="itemCountLabel">シリーズ</small></div>
+        <div><span id="visibleCount">0</span><small>表示中</small></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="workbench" aria-label="商品検索・絞り込み">
+        <aside id="filters" class="control-panel skip-target" aria-label="絞り込み条件" tabindex="-1">
+          <label class="search-box">
+            <span>キーワード</span>
+            <input id="searchInput" type="search" autocomplete="off" />
+          </label>
+
+          <div id="makerFilterBlock" class="filter-block">
+            <h2 id="makerFilterTitle">メーカー</h2>
+            <div id="makerFilters" class="chip-grid" role="group" aria-labelledby="makerFilterTitle"></div>
+          </div>
+
+          <div id="gradeFilterBlock" class="filter-block">
+            <h2 id="gradeFilterTitle">グレード</h2>
+            <div id="gradeFilters" class="chip-grid" role="group" aria-labelledby="gradeFilterTitle"></div>
+          </div>
+
+          <div id="yearFilterBlock" class="filter-block">
+            <h2 id="yearFilterTitle">発売年</h2>
+            <div id="yearFilters" class="chip-grid" role="group" aria-labelledby="yearFilterTitle"></div>
+          </div>
+
+          <div id="capacityFilterBlock" class="filter-block">
+            <h2 id="capacityFilterTitle">容量</h2>
+            <div id="capacityFilters" class="chip-grid" role="group" aria-labelledby="capacityFilterTitle"></div>
+          </div>
+
+          <div id="widthFilterBlock" class="filter-block">
+            <h2 id="widthFilterTitle">本体幅</h2>
+            <div id="widthFilters" class="chip-grid" role="group" aria-labelledby="widthFilterTitle"></div>
+          </div>
+
+          <div id="doorFilterBlock" class="filter-block">
+            <h2 id="doorFilterTitle">ドア方式</h2>
+            <div id="doorFilters" class="chip-grid" role="group" aria-labelledby="doorFilterTitle"></div>
+          </div>
+
+          <div id="layoutFilterBlock" class="filter-block">
+            <h2 id="layoutFilterTitle">レイアウト・重視点</h2>
+            <div id="layoutFilters" class="chip-grid" role="group" aria-labelledby="layoutFilterTitle"></div>
+          </div>
+
+          <div id="energyFilterBlock" class="filter-block">
+            <h2 id="energyFilterTitle">年間消費電力量</h2>
+            <div id="energyFilters" class="chip-grid" role="group" aria-labelledby="energyFilterTitle"></div>
+          </div>
+
+          <div class="filter-note">
+            <strong>接客メモ</strong>
+            <p id="salesNote"></p>
+          </div>
+        </aside>
+
+        <section id="results" class="main-panel skip-target" aria-labelledby="resultTitle" tabindex="-1">
+          <div class="result-head">
+            <div>
+              <p id="listKicker" class="kicker">シリーズ一覧</p>
+              <h2 id="resultTitle">全シリーズ</h2>
+            </div>
+            <button id="clearFilters" class="ghost-button" type="button">条件クリア</button>
+          </div>
+          <div id="activeFilterSummary" class="active-filter-summary" aria-live="polite"></div>
+          <p id="resultsStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="productGrid" class="series-grid"></div>
+        </section>
+      </section>
+
+      <section id="compare" class="comparison-band skip-target" aria-labelledby="compareTitle" tabindex="-1">
+        <div class="section-head">
+          <div><p class="kicker">接客比較</p><h2 id="compareTitle">比較リスト</h2></div>
+          <button id="clearCompare" class="ghost-button" type="button">比較を空にする</button>
+        </div>
+        <div id="compareEmpty" class="empty-state"></div>
+        <div id="compareControls" class="comparison-controls" hidden>
+          <label class="switch-control">
+            <input id="differencesOnly" type="checkbox" />
+            <span>違いのみ表示</span>
+          </label>
+          <div class="comparison-control-actions">
+            <button id="expandCompareGroups" class="ghost-button" type="button">すべて開く</button>
+            <button id="collapseCompareGroups" class="ghost-button" type="button">主要項目だけ</button>
+          </div>
+          <p class="comparison-legend">○＝機能あり、×＝公式資料でなしを確認、－＝公式資料では未確認</p>
+          <a class="unresolved-report-link" href="unresolved.html">未確認項目と必要資料を見る</a>
+        </div>
+        <p id="compareScrollHint" class="compare-scroll-hint" hidden>横にスクロールして比較できます。</p>
+        <p id="compareStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div id="compareTableWrap" class="table-wrap" role="region" aria-label="選択した商品の比較" aria-describedby="compareScrollHint" tabindex="-1"></div>
+      </section>
+
+      <section class="guide-band" aria-labelledby="makerGuideTitle">
+        <div class="section-head">
+          <div><p class="kicker">メーカー別</p><h2 id="makerGuideTitle">売り分け早見</h2></div>
+        </div>
+        <div id="makerGuide" class="maker-guide"></div>
+      </section>
+    </main>
+
+    <a class="compare-fab" href="#compare" aria-label="比較リストへ移動">
+      <span>比較</span><strong data-compare-count>0</strong>
+    </a>
+
+    <nav class="mobile-jumpbar" aria-label="画面内移動">
+      <a href="#filters">条件</a>
+      <a href="#results">一覧 <span id="mobileVisibleCount">0</span></a>
+      <a href="#compare">比較 <span data-compare-count>0</span></a>
+    </nav>
+
+    <dialog id="detailDialog" class="catalog-dialog" aria-labelledby="detailDialogTitle">
+      <div class="catalog-dialog-inner">
+        <div class="dialog-toolbar">
+          <a class="dialog-compare-jump" href="#compare">比較 <span data-compare-count>0</span></a>
+          <button class="dialog-close" type="button" data-close-dialog aria-label="詳細を閉じる">×</button>
+        </div>
+        <div id="detailDialogContent"></div>
+      </div>
+    </dialog>
+
+    <script src="data.js?v=20260818"></script>
+    <script src="app.js?v=20260818"></script>
+  </body>
+</html>
