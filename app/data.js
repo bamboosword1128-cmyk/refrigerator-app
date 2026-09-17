@@ -284,49 +284,49 @@ window.APPLIANCE_DATA = {
       "id": "panasonic",
       "name": "パナソニック",
       "accent": "#1557a5",
-      "logo": "assets/logos/panasonic.png",
+      "logo": "assets/logos/panasonic.png?v=20260918",
       "guide": "冷凍室が真ん中の大容量モデルと、幅・奥行60cmの薄型モデルを展開。霜つき抑制冷凍、AIエコナビ、微凍結パーシャルなどを確認しやすい。"
     },
     {
       "id": "hitachi",
       "name": "日立",
       "accent": "#b51f2e",
-      "logo": "assets/logos/hitachi.png",
+      "logo": "assets/logos/hitachi.png?v=20260918",
       "guide": "まるごとチルド、氷温ルーム、3段大容量冷凍が軸。大容量・奥行スリムや真空氷温ルーム搭載モデルも選べる。"
     },
     {
       "id": "mitsubishi",
       "name": "三菱電機",
       "accent": "#d0212d",
-      "logo": "assets/logos/mitsubishi-electric.png",
+      "logo": "assets/logos/mitsubishi-electric.png?v=20260918",
       "guide": "全室独立おまかせA.I.、切れちゃう瞬冷凍A.I.、氷点下ストッカーD A.I.が特徴。冷凍室真ん中と野菜室真ん中を選べる。"
     },
     {
       "id": "toshiba",
       "name": "東芝",
       "accent": "#c33b32",
-      "logo": "assets/logos/toshiba.png",
+      "logo": "assets/logos/toshiba.png?v=20260918",
       "guide": "VEGETAの野菜鮮度、3段冷凍室、チルド機能が中心。奥行を抑えた大容量モデルとIoLIFE対応モデルを展開。"
     },
     {
       "id": "sharp",
       "name": "シャープ",
       "accent": "#c71930",
-      "logo": "assets/logos/sharp.png",
+      "logo": "assets/logos/sharp.png?v=20260918",
       "guide": "奥行63cmの薄型大容量、真ん中野菜室、プラズマクラスターが選び分けの軸。機種によりCOCORO HOME連携に対応。"
     },
     {
       "id": "aqua",
       "name": "AQUA（アクア）",
       "accent": "#007ba7",
-      "logo": "assets/logos/aqua.png",
+      "logo": "assets/logos/aqua.png?v=20260918",
       "guide": "薄型ワイドのTZ、大容量冷凍と鮮度保持を備えるTX、幅を抑えた中容量モデルまで、収納レイアウトの個性が明確。"
     },
     {
       "id": "hisense",
       "name": "Hisense（ハイセンス）",
       "accent": "#008a91",
-      "logo": "assets/logos/hisense.png",
+      "logo": "assets/logos/hisense.png?v=20260918",
       "guide": "底面排熱とぴたよせドアを採用した450Lモデルや、基本機能をまとめた360Lモデルを展開。設置性と容量のバランスで提案しやすい。"
     },
     {
