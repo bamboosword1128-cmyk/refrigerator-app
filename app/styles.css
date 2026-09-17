@@ -343,6 +343,7 @@ main {
   display: grid;
   place-items: center;
   height: 104px;
+  overflow: hidden;
   padding: 10px 16px;
   background: #fff;
   border-bottom: 5px solid var(--accent, var(--teal));
@@ -350,11 +351,11 @@ main {
 
 .card-media img {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: 74px;
-  object-fit: contain;
+  width: 100%;
+  max-width: 340px;
+  height: 74px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .card-body {
@@ -783,6 +784,29 @@ main {
   line-height: 1.6;
 }
 
+.compare-feature-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.compare-feature-tip summary {
+  min-height: 36px;
+  border-radius: 11px;
+  padding: 7px 8px;
+  font-size: 0.76rem;
+}
+
+.compare-feature-tip p {
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.compare-feature-tip .feature-badge {
+  padding: 2px 5px;
+  font-size: 0.62rem;
+}
+
 .resource-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1047,6 +1071,7 @@ main {
   display: grid;
   place-items: center;
   height: 108px;
+  overflow: hidden;
   padding: 10px 18px;
   background: #fff;
   border-bottom: 5px solid var(--accent, var(--teal));
@@ -1054,11 +1079,11 @@ main {
 
 .maker-logo img {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: 78px;
-  object-fit: contain;
+  width: 100%;
+  max-width: 340px;
+  height: 78px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .maker-copy {
@@ -1240,7 +1265,7 @@ main {
   }
 
   .card-media img {
-    max-height: 64px;
+    height: 64px;
   }
 
   .card-body {
@@ -1361,7 +1386,7 @@ main {
   }
 
   .maker-logo img {
-    max-height: 70px;
+    height: 70px;
   }
 
   .mobile-jumpbar {
@@ -1848,6 +1873,24 @@ main {
 
 .status-unknown {
   color: #6f6a63;
+}
+
+.presence-value {
+  display: inline-block;
+  min-width: 1.5em;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.intentional-empty {
+  display: inline-block;
+  min-height: 1.25em;
+  min-width: 1px;
+}
+
+.center-room-value {
+  font-weight: 850;
 }
 
 .value-description,

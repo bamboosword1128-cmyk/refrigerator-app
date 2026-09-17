@@ -16,6 +16,8 @@ const productSpecs = comparison.productSpecs || {};
 const fields = comparison.fields || [];
 const groups = comparison.groups || [];
 const sources = comparison.catalogSources || [];
+const productSources = spec.sources || [];
+const featureGroups = spec.featureGroups || [];
 
 const duplicateValues = (values) => values.filter((value, index) => values.indexOf(value) !== index);
 const makerIds = new Set(makers.map((maker) => maker.id));
@@ -23,6 +25,12 @@ const productIds = products.map((product) => product.id);
 const productIdSet = new Set(productIds);
 const sourceIds = new Set(sources.map((source) => source.id));
 const groupIds = new Set(groups.map((group) => group.id));
+const productSourceIds = new Set(productSources.map((source) => source.id));
+const featureGroupIds = new Set(featureGroups.map((group) => group.id));
+const normalizeFeatureName = (value) => String(value || "")
+  .normalize("NFKC")
+  .toLocaleLowerCase("ja")
+  .replace(/[\s　・･／/（）()「」『』\-―ー、,。.:：+＋]/g, "");
 
 for (const duplicate of new Set(duplicateValues(makers.map((maker) => maker.id)))) {
   errors.push(`メーカーIDが重複: ${duplicate}`);
@@ -43,6 +51,19 @@ for (const duplicate of new Set(duplicateValues(productIds))) {
 for (const product of products) {
   if (!makerIds.has(product.makerId)) errors.push(`${product.id}: makerId ${product.makerId} が未登録`);
   if (!productSpecs[product.id]) errors.push(`${product.id}: comparison.productSpecs がない`);
+  const featureNames = new Set();
+  for (const feature of product.features || []) {
+    if (!feature.name) errors.push(`${product.id}: 名前のないメーカー機能がある`);
+    if (!feature.description) errors.push(`${product.id}/${feature.name}: 説明がない`);
+    if (!featureGroupIds.has(feature.groupId)) errors.push(`${product.id}/${feature.name}: feature groupId ${feature.groupId} が未登録`);
+    for (const sourceId of feature.sourceIds || []) {
+      if (!productSourceIds.has(sourceId)) errors.push(`${product.id}/${feature.name}: product sourceId ${sourceId} が未登録`);
+    }
+    if (!(feature.sourceIds || []).length) errors.push(`${product.id}/${feature.name}: 出典IDがない`);
+    const normalizedName = normalizeFeatureName(feature.name);
+    if (featureNames.has(normalizedName)) errors.push(`${product.id}: メーカー機能が重複 ${feature.name}`);
+    featureNames.add(normalizedName);
+  }
 }
 for (const id of Object.keys(productSpecs)) {
   if (!productIdSet.has(id)) warnings.push(`${id}: products 側に対応する商品がない`);
@@ -95,6 +116,7 @@ const isUnknown = (field, value) => {
   if (value === null || value === undefined || value === "") return true;
   if (field.type === "list") return !Array.isArray(value) || value.length === 0;
   if (field.type === "capability") return value.available !== true && value.available !== false;
+  if (field.type === "featureSection") return !value || value.status === "unknown";
   return false;
 };
 
@@ -111,7 +133,9 @@ const rangeChecks = [
   ["size.weightKg", 20, 200],
   ["size.totalL", 100, 800],
   ["size.fridgeL", 20, 500],
+  ["size.chilledL", 0, 100],
   ["size.freezerL", 10, 250],
+  ["size.independentFreezerL", 0, 150],
   ["size.vegetableL", 0, 200],
   ["energy.annualKwh", 150, 650],
   ["energy.achievementPercent", 50, 250]
@@ -131,6 +155,34 @@ for (const product of products) {
     if (field.type === "capability" && value != null && ![true, false, null, undefined].includes(value.available)) {
       errors.push(`${product.id}/${field.id}: available は true / false / null のいずれかにする`);
     }
+    if (field.type === "capability" && value?.available === true) {
+      if (!value.featureName) {
+        errors.push(`${product.id}/${field.id}: 搭載機能の正式名称がない`);
+      } else if (/非搭載|なし$/.test(value.featureName)) {
+        errors.push(`${product.id}/${field.id}: 搭載=true なのに非搭載を示す名称 ${value.featureName}`);
+      } else if (!(product.features || []).some((feature) => normalizeFeatureName(feature.name) === normalizeFeatureName(value.featureName))) {
+        errors.push(`${product.id}/${field.id}: 搭載機能 ${value.featureName} がメーカー機能欄に表示されない`);
+      }
+    }
+    if (field.type === "featureSection" && value != null) {
+      if (!["present", "absent", "unknown"].includes(value.status)) {
+        errors.push(`${product.id}/${field.id}: status は present / absent / unknown のいずれかにする`);
+      }
+      if (!Array.isArray(value.items)) {
+        errors.push(`${product.id}/${field.id}: items は配列にする`);
+      } else {
+        if (value.status === "present" && value.items.length === 0) errors.push(`${product.id}/${field.id}: present なのに項目がない`);
+        if (value.status === "absent" && value.items.length > 0) errors.push(`${product.id}/${field.id}: absent なのに項目がある`);
+        const itemNames = new Set();
+        for (const item of value.items) {
+          if (!item.name) errors.push(`${product.id}/${field.id}: 機能名がない`);
+          if (!item.description) errors.push(`${product.id}/${field.id}/${item.name || "名称なし"}: 一言説明がない`);
+          const normalizedName = normalizeFeatureName(item.name);
+          if (itemNames.has(normalizedName)) errors.push(`${product.id}/${field.id}: 機能名が重複 ${item.name}`);
+          itemNames.add(normalizedName);
+        }
+      }
+    }
   }
 
   for (const [path, minimum, maximum] of rangeChecks) {
@@ -141,7 +193,7 @@ for (const product of products) {
   }
 
   const total = data.size?.totalL;
-  for (const key of ["fridgeL", "freezerL", "independentFreezerL", "vegetableL", "iceL"]) {
+  for (const key of ["fridgeL", "chilledL", "freezerL", "independentFreezerL", "vegetableL", "iceL"]) {
     const value = data.size?.[key];
     if (total != null && value != null && value > total) errors.push(`${product.id}/size.${key}: 定格内容積を超えている`);
   }
@@ -153,6 +205,115 @@ for (const product of products) {
   }
   if (!data.source?.pages) warnings.push(`${product.id}: 確認ページがない`);
 }
+
+const expectedOpeningFields = {
+  basic: ["series", "release", "colors", "door-type"],
+  size: ["width", "depth", "height", "weight", "fridge-capacity", "chilled-capacity", "freezer-capacity", "independent-freezer-capacity", "vegetable-capacity"],
+  layout: ["center-room", "ice-room"],
+  refrigeration: ["chilled-function", "fridge-storage", "door-pocket", "fridge-other"],
+  freezing: ["special-freezing", "frost-control", "small-freezer", "freezer-storage", "freezer-other", "ice-room-functions"],
+  vegetables: ["vegetable-freshness"],
+  clean: ["clean-air", "maintenance"],
+  energy: ["annual-energy", "annual-cost", "energy-ai"],
+  smart: ["iot-connectivity", "iot-food", "iot-monitoring", "iot-ai"]
+};
+for (const [groupId, expectedIds] of Object.entries(expectedOpeningFields)) {
+  const actualIds = fields.filter((field) => field.groupId === groupId).map((field) => field.id);
+  if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
+    errors.push(`${groupId}: 比較項目が指定順と不一致 ${JSON.stringify(actualIds)}`);
+  }
+}
+const expectedGroups = [
+  ["basic", "1. 基本情報"],
+  ["size", "2. サイズ・容量"],
+  ["layout", "3. レイアウト"],
+  ["refrigeration", "4. 冷蔵機能"],
+  ["freezing", "5. 冷凍機能"],
+  ["vegetables", "6. 野菜保存"],
+  ["clean", "7. 清潔・お手入れ"],
+  ["energy", "8. 省エネ性"],
+  ["smart", "9. スマホ連携・IoT"]
+];
+if (JSON.stringify(groups.map((group) => [group.id, group.label])) !== JSON.stringify(expectedGroups)) {
+  errors.push(`比較カテゴリが指定順と不一致 ${JSON.stringify(groups.map((group) => [group.id, group.label]))}`);
+}
+const seriesField = fields.find((field) => field.id === "series");
+if (!seriesField?.emptyForMakerIds?.includes("sharp")) errors.push("シャープのシリーズ名空欄指定がない");
+for (const product of products) {
+  const independentIce = productSpecs[product.id]?.layout?.independentIce;
+  if (typeof independentIce !== "boolean") errors.push(`${product.id}/layout.independentIce: 製氷室は true / false で確定する`);
+  const details = productSpecs[product.id]?.details;
+  for (const item of details?.chilled?.items || []) {
+    if (!item.description.includes("温度：") || !item.description.includes("保存目安：")) {
+      errors.push(`${product.id}/details.chilled/${item.name}: 温度と肉・魚の保存目安が説明にない`);
+    }
+  }
+  if (independentIce === false && details?.iceRoom?.status !== "absent") {
+    errors.push(`${product.id}/details.iceRoom: 製氷室なしは absent にする`);
+  }
+  if (independentIce === true && details?.iceRoom?.status !== "present") {
+    errors.push(`${product.id}/details.iceRoom: 製氷室ありは present にする`);
+  }
+}
+
+// Regression guards for model-specific catalog bars that are easy to overgeneralize.
+const findProduct = (makerId, model) => {
+  const wanted = normalizeModel(model);
+  return products.find((product) => product.makerId === makerId && [product.name, ...(product.aliases || [])].some((name) => normalizeModel(name) === wanted));
+};
+const expectValue = (makerId, model, path, expected, label) => {
+  const product = findProduct(makerId, model);
+  if (!product) {
+    errors.push(`回帰チェック対象がない: ${makerId}/${model}`);
+    return;
+  }
+  const actual = getPath(productSpecs[product.id], path);
+  if (actual !== expected) errors.push(`${model}/${label}: 期待値 ${JSON.stringify(expected)} に対して ${JSON.stringify(actual)}`);
+};
+const expectCapability = (makerId, model, path, expectedAvailable, expectedNamePart) => {
+  const product = findProduct(makerId, model);
+  if (!product) {
+    errors.push(`回帰チェック対象がない: ${makerId}/${model}`);
+    return;
+  }
+  const actual = getPath(productSpecs[product.id], path);
+  if (actual?.available !== expectedAvailable) errors.push(`${model}/${path}: available=${actual?.available}（期待 ${expectedAvailable}）`);
+  if (expectedNamePart && !String(actual?.featureName || "").includes(expectedNamePart)) errors.push(`${model}/${path}: 名称 ${actual?.featureName || "なし"} に ${expectedNamePart} がない`);
+};
+const expectNoFeature = (makerId, model, featureNamePart) => {
+  const product = findProduct(makerId, model);
+  if (!product) {
+    errors.push(`回帰チェック対象がない: ${makerId}/${model}`);
+    return;
+  }
+  const found = (product.features || []).find((feature) => String(feature.name || "").includes(featureNamePart));
+  if (found) errors.push(`${model}: 非搭載の機能 ${found.name} がメーカー機能欄にある`);
+};
+
+expectCapability("mitsubishi", "MR-BD46N", "smart.app", true, "三菱冷蔵庫アプリ");
+expectCapability("mitsubishi", "MR-BD46N", "meatFish.freshness", true, "氷点下ストッカーD A.I.");
+expectCapability("mitsubishi", "MR-MD45M", "smart.app", true, "三菱冷蔵庫アプリ");
+expectCapability("mitsubishi", "MR-MD45N", "smart.app", true, "三菱冷蔵庫アプリ");
+expectCapability("panasonic", "NR-F55HY3", "clean.antibacterial", true, "Wクリーンフィルター");
+expectCapability("panasonic", "NR-F65WX3", "storage.adjustableShelves", true, "全棚ガラストレイ");
+expectCapability("panasonic", "NR-F49EY3", "smart.foodManagement", true, "AIカメラ");
+expectCapability("panasonic", "NR-E41RY3", "smart.foodManagement", true, "AIカメラ");
+expectCapability("panasonic", "NR-F52BR3", "meatFish.freshness", true, "チルドルーム");
+expectCapability("panasonic", "NR-F52BR3", "vegetables.freshness", true, "Wシャキシャキ野菜室プラス");
+expectCapability("sharp", "SJ-X504R", "storage.doorAssist", true, "オートクローズ");
+expectCapability("aqua", "AQR-TXA50A", "freezing.quality", true, "おいシールド冷凍");
+expectCapability("aqua", "AQR-V46A", "meatFish.freshness", true, "フルワイドチルド");
+expectCapability("hisense", "HR-GC360KW", "storage.foldingShelf", true, "折りたたみ可能棚");
+expectCapability("toshiba", "GR-A500GT", "meatFish.freshness", true, "速鮮チルド");
+expectCapability("toshiba", "GR-A500GT", "storage.doorAssist", true, "タッチオープン");
+expectNoFeature("toshiba", "GR-A500GT", "Deliチルド");
+expectNoFeature("toshiba", "GR-A500GT", "ブースト解凍");
+expectValue("mitsubishi", "MR-BD46N", "meatFish.storageClass", "氷点下系", "保存区分");
+expectValue("panasonic", "NR-F65WX3", "size.chilledL", 21, "チルドルーム容量");
+expectValue("mitsubishi", "MR-WZ61N", "size.chilledL", 30, "チルドルーム容量");
+expectValue("toshiba", "GR-A640XFS", "size.chilledL", 29, "チルドルーム容量");
+expectValue("sharp", "SJ-MF61R", "size.chilledL", 22, "チルドルーム容量");
+expectValue("aqua", "AQR-TZA52A", "size.chilledL", 18, "チルドルーム容量");
 
 const populatedCells = directFields.length * products.length - unknownCells;
 const completeness = directFields.length && products.length

@@ -176,7 +176,8 @@
       clearFilterState();
       elements.searchInput.value = "";
       renderAll();
-      elements.searchInput.focus();
+      elements.searchInput.focus({ preventScroll: true });
+      scrollPageToTop();
     });
 
     document.querySelector("#clearCompare").addEventListener("click", () => {
@@ -242,6 +243,7 @@
     if (!targetSet) return;
     targetSet.has(value) ? targetSet.delete(value) : targetSet.add(value);
     renderAll();
+    scrollPageToTop();
   }
 
   function clearFilterState() {
@@ -398,7 +400,7 @@
   function detailedCompareTable(items) {
     const header = compareHeader(items);
     const groupRows = (comparison.groups || []).map((group) => {
-      let fields = (comparison.fields || []).filter((field) => field.groupId === group.id && !field.key);
+      let fields = (comparison.fields || []).filter((field) => field.groupId === group.id);
       if (state.differencesOnly) fields = fields.filter((field) => fieldHasDifference(field, items));
       const isOpen = state.openGroups.has(group.id);
       const visibleRows = isOpen ? fields.map((field) => compareRow(field, items)).join("") : "";
@@ -439,7 +441,7 @@
         <div class="compare-card-head"><span>${escapeHtml(maker.name)}</span><strong>${escapeHtml(item.name)}</strong><button type="button" data-compare-id="${escapeAttr(item.id)}">比較から外す</button></div>
         <dl class="mobile-key-list">${keyFields.map((field) => `<div><dt>${renderFieldLabel(field)}</dt><dd>${renderFieldValue(field, item, items)}</dd></div>`).join("")}</dl>
         <div class="mobile-compare-groups">${(comparison.groups || []).map((group) => {
-          let fields = (comparison.fields || []).filter((field) => field.groupId === group.id && !field.key);
+          let fields = (comparison.fields || []).filter((field) => field.groupId === group.id);
           if (state.differencesOnly) fields = fields.filter((field) => fieldHasDifference(field, items));
           if (!fields.length) return "";
           return `<details><summary>${escapeHtml(group.label)} <small>${fields.length}項目</small></summary><dl>${fields.map((field) => `<div><dt>${renderFieldLabel(field)}</dt><dd>${renderFieldValue(field, item, items)}</dd></div>`).join("")}</dl></details>`;
@@ -457,6 +459,7 @@
 
   function renderFieldValue(field, product, comparedItems = []) {
     const spec = productSpec(product);
+    if (field.emptyForMakerIds?.includes(product.makerId)) return '<span class="intentional-empty" aria-label="空欄"></span>';
     if (field.type === "recommended") return inlineList(recommendedUsers(product));
     if (field.type === "strengths") return inlineList(productStrengths(product, comparedItems));
     if (field.type === "cautions") return inlineList(product.cautions || []);
@@ -469,10 +472,16 @@
       const ratio = freezerRatio(spec);
       return ratio == null ? unknownValue() : `<span class="numeric-value">${ratio.toFixed(1)}<small>%</small></span>`;
     }
+    if (field.type === "centerRoom") {
+      const value = centerRoomValue(spec);
+      return value == null ? unknownValue() : `<span class="center-room-value">${escapeHtml(value)}</span>`;
+    }
 
     const value = getPath(spec, field.path);
+    if (field.type === "featureSection") return featureSectionValue(value);
     if (field.type === "capability") return capabilityValue(value);
     if (field.type === "boolean") return booleanValue(value);
+    if (field.type === "presence") return presenceValue(value);
     if (field.type === "list") return Array.isArray(value) && value.length ? inlineList(value) : unknownValue();
     if (field.type === "number") return value == null ? unknownValue() : `<span class="numeric-value">${formatNumber(value)}${field.unit ? `<small>${escapeHtml(field.unit)}</small>` : ""}</span>`;
     return value === null || value === undefined || value === "" ? unknownValue() : escapeHtml(value);
@@ -485,10 +494,29 @@
     return unknownValue();
   }
 
+  function featureSectionValue(value) {
+    if (value?.status === "absent") return '<span class="presence-value presence-no" aria-label="なし">❌</span>';
+    if (!value || value.status === "unknown" || !Array.isArray(value.items) || !value.items.length) return unknownValue();
+    return `<div class="compare-feature-list">${value.items.map((item) => `<details class="feature-tip compare-feature-tip"><summary>${item.tag ? `<span class="feature-badge">${escapeHtml(item.tag)}</span>` : ""}<span>${escapeHtml(item.name)}</span></summary><p>${escapeHtml(item.description)}</p></details>`).join("")}</div>`;
+  }
+
   function booleanValue(value) {
     if (value === true) return '<span class="status-value status-yes"><b aria-hidden="true">○</b><span>該当</span></span>';
     if (value === false) return '<span class="status-value status-no"><b aria-hidden="true">×</b><span>非該当</span></span>';
     return unknownValue();
+  }
+
+  function presenceValue(value) {
+    if (value === true) return '<span class="presence-value presence-yes" aria-label="あり">⭕️</span>';
+    if (value === false) return '<span class="presence-value presence-no" aria-label="なし">❌</span>';
+    return unknownValue();
+  }
+
+  function centerRoomValue(spec) {
+    if (spec.layout?.centerFreezer === true) return "冷凍室";
+    if (spec.layout?.centerVegetable === true) return "野菜室";
+    if (spec.layout?.centerFreezer === false && spec.layout?.centerVegetable === false) return "該当なし";
+    return null;
   }
 
   function unknownValue() {
@@ -502,12 +530,14 @@
 
   function comparableValue(field, product) {
     const spec = productSpec(product);
+    if (field.emptyForMakerIds?.includes(product.makerId)) return "intentional-empty";
     if (field.type === "annualCost") return spec.energy?.annualKwh == null ? "unknown" : String(spec.energy.annualKwh * electricityRate);
     if (field.type === "freezerRatio") return freezerRatio(spec)?.toFixed(3) ?? "unknown";
     if (field.type === "recommended") return recommendedUsers(product).join("|");
     if (field.type === "strengths") return productStrengths(product, []).join("|");
     if (field.type === "cautions") return (product.cautions || []).join("|");
     if (field.type === "sourceTrace") return spec.source?.sourceId || "unknown";
+    if (field.type === "centerRoom") return centerRoomValue(spec) || "unknown";
     const value = getPath(spec, field.path);
     if (field.type === "capability") return value?.available == null ? "unknown" : `${value.available}:${value.featureName || ""}`;
     return JSON.stringify(value ?? null);
@@ -694,6 +724,18 @@
     if (!target) return;
     target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     target.focus({ preventScroll: true });
+  }
+
+  function scrollPageToTop() {
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    root.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      root.style.scrollBehavior = previousScrollBehavior;
+    });
   }
 
   function normalize(value) {
