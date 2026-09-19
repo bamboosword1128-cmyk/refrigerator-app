@@ -478,8 +478,9 @@
     }
 
     const value = getPath(spec, field.path);
-    if (field.type === "featureSection") return featureSectionValue(value);
-    if (field.type === "capability") return capabilityValue(value);
+    const isComparison = comparedItems.length > 0;
+    if (field.type === "featureSection") return featureSectionValue(value, isComparison);
+    if (field.type === "capability") return capabilityValue(value, isComparison);
     if (field.type === "boolean") return booleanValue(value);
     if (field.type === "presence") return presenceValue(value);
     if (field.type === "list") return Array.isArray(value) && value.length ? inlineList(value) : unknownValue();
@@ -487,17 +488,28 @@
     return value === null || value === undefined || value === "" ? unknownValue() : escapeHtml(value);
   }
 
-  function capabilityValue(value) {
+  function capabilityValue(value, isComparison = false) {
     const available = value?.available;
-    if (available === true) return `<span class="status-value status-yes"><b aria-hidden="true">○</b><span>${escapeHtml(value.featureName || "あり")}</span></span>${value.description ? `<small class="value-description">${escapeHtml(value.description)}</small>` : ""}`;
+    const description = isComparison ? comparisonDescription(value?.description) : value?.description;
+    if (available === true) return `<span class="status-value status-yes"><b aria-hidden="true">○</b><span>${escapeHtml(value.featureName || "あり")}</span></span>${description ? `<small class="value-description">${escapeHtml(description)}</small>` : ""}`;
     if (available === false) return '<span class="status-value status-no"><b aria-hidden="true">×</b><span>非搭載</span></span>';
     return unknownValue();
   }
 
-  function featureSectionValue(value) {
+  function featureSectionValue(value, isComparison = false) {
     if (value?.status === "absent") return '<span class="presence-value presence-no" aria-label="なし">❌</span>';
     if (!value || value.status === "unknown" || !Array.isArray(value.items) || !value.items.length) return unknownValue();
-    return `<div class="compare-feature-list">${value.items.map((item) => `<details class="feature-tip compare-feature-tip"><summary>${item.tag ? `<span class="feature-badge">${escapeHtml(item.tag)}</span>` : ""}<span>${escapeHtml(item.name)}</span></summary><p>${escapeHtml(item.description)}</p></details>`).join("")}</div>`;
+    return `<div class="compare-feature-list">${value.items.map((item) => {
+      const description = isComparison ? comparisonDescription(item.description) : item.description;
+      return `<details class="feature-tip compare-feature-tip"><summary>${item.tag ? `<span class="feature-badge">${escapeHtml(item.tag)}</span>` : ""}<span>${escapeHtml(item.name)}</span></summary>${description ? `<p>${escapeHtml(description)}</p>` : ""}</details>`;
+    }).join("")}</div>`;
+  }
+
+  function comparisonDescription(description) {
+    return String(description || "")
+      .replaceAll("メーカー公式カタログ・公式仕様表で搭載を確認", "")
+      .replace(/。{2,}/g, "。")
+      .trim();
   }
 
   function booleanValue(value) {
